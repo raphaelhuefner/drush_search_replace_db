@@ -69,3 +69,55 @@ function drush_search_and_replace_db_execute() {
 */
 }
 
+
+
+function drush_search_and_replace_db_update_db(array $search_and_replace_patterns=array()) {
+  global $db_prefix;
+
+  if (empty($search_and_replace_patterns)) {
+    $search_and_replace_patterns = array(
+      'sites/all/modules/cantrust' => 'profiles/gcsc/modules/contrib',
+      'sites/all/modules/contrib' => 'profiles/gcsc/modules/contrib',
+      'sites/all/modules/custom' => 'profiles/gcsc/modules/custom',
+      'sites/all/modules/developer' => 'profiles/gcsc/modules/development',
+      'sites/all/modules/features' => 'profiles/gcsc/modules/features',
+      'sites/all/themes/contrib' => 'profiles/gcsc/themes',
+      'sites/all/themes/custom' => 'profiles/gcsc/themes',
+      'sites/all/libraries' => 'profiles/gcsc/libraries',
+    );
+  }
+
+  $update_sql = '';
+  if (! is_string($db_prefix)) {
+    // @todo take care of $db_prefix
+    die('Cannot handle complex $db_prefix setting.');
+  }
+  $tables_result = db_query("SHOW TABLES LIKE '%s%%'", $db_prefix);
+  while ($table_name = db_result($tables_result)) {
+//    var_dump('TABLE ' . $table_name);
+    $columns_result = db_query("SHOW COLUMNS FROM %s", $table_name);
+    while ($column = db_fetch_object($columns_result)) {
+      $column_name = $column->Field;
+//      var_dump('  COLUMN ' . $table_name . '.' . $column_name);
+      foreach ($search_and_replace_patterns as $search => $replace) {
+        $column_values_result = db_result(db_query("SELECT %s AS column_value FROM %s WHERE %s LIKE '%%%s%%';", $column_name, $table_name, $column_name, $search));
+        while ($column_value = db_result($column_values_result)) {
+          $unserialized_column_value = unserialize($column_value);
+          if ((FALSE !== $unserialized_column_value) || (serialize(FALSE) == $column_value)){
+            $value_as_php_code = var_export($unserialized_column_value, TRUE);
+            $changed_value_as_php_code = str_replace($search, $replace, $value_as_php_code);
+            $changed_value = eval($changed_value_as_php_code);
+            $changed_column_value = serialize($changed_value);
+            db_query("UPDATE %s SET %s = '%s' WHERE %s = '%s';", $table_name, $column_name, $changed_column_value, $column_name, $column_value);
+          }
+          else {
+            db_query("UPDATE %s SET %s = REPLACE(%s, '%s', '%s') WHERE %s = '%s';", $table_name, $column_name, $column_name, $search, $replace, $column_name, $column_value);
+          }
+        }
+      }
+    }
+  }
+  db_query("UPDATE variable SET value = 's:4:\"gcsc\";' WHERE value = 's:7:\"default\";' AND name IN ('install_profile', 'backup_migrate_profile_id');\n");
+}
+
+
