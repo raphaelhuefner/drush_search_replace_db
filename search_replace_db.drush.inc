@@ -2,8 +2,11 @@
 // $Id:$
 
 /**
-* @File Search and Replace DB Drush Plugin
-*/
+ * @file Search and replace DB Drush Plugin
+ * @license http://opensource.org/licenses/gpl-3.0.html GNU General Public License, version 3 (GPLv3)
+ * @author Raphael Huefner http://www.raphaelhuefner.com
+ * Sponsored by Affinity Bridge http://www.affinitybridge.com
+ */
 
 require_once (dirname(__FILE__) . '/SearchReplaceSerialized.class.php');
 
