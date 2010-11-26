@@ -17,7 +17,7 @@ function search_replace_db_drush_command() {
   $items['search-replace-db'] = array(
     'bootstrap' => DRUSH_BOOTSTRAP_DRUPAL_DATABASE,
     'description' => dt('Searches and replaces text in the whole DB.'),
-    'callback' => 'search_replace_db_execute',
+    'callback' => 'drush_search_replace_db_execute',
   );
   return $items;
 }
@@ -55,7 +55,7 @@ define('ESC_BRIGHT_GREEN', chr(0x1B) . '[1;32m');
 /**
  * Drush command callback. This is where the action takes place.
  */
-function search_replace_db_execute() {
+function drush_search_replace_db_execute() {
   $args = func_get_args();
   if (! call_user_func_array('search_replace_db_validate', $args)) {
     return drush_set_error('SEARCH_REPLACE_GENERAL_ERROR', dt('Search/replace parameter validation error.'));
@@ -94,8 +94,14 @@ function search_replace_db_update_db(array $search_replace_patterns=array()) {
         drush_log(dt('    SEARCHING FOR "%search"', array('%search' => $search)), 'debug');
         $column_values_result = db_query("SELECT %s AS column_value FROM %s WHERE %s LIKE '%%%s%%';", $column_name, $table_name, $column_name, $search);
         while ($column_value = db_result($column_values_result)) {
-          $unserialized_column_value = unserialize($column_value);
-          if ((FALSE !== $unserialized_column_value) || (serialize(FALSE) == $column_value)){
+
+          /**
+           * @ is used here because unserialize() is only used as a test whether 
+           * we have in fact serialized data, so expect it to fail often.
+           */
+          $is_serialized = ((FALSE !== @unserialize($column_value)) || (serialize(FALSE) == $column_value));
+
+          if ($is_serialized) {
             drush_log(dt('Found "@search", start replacing with "@replace" in PHP serialized data in table "@table" in column "@column".', array('@search' => $search, '@replace' => $replace, '@table' => $table_name, '@column' => $column_name)), 'info');
             $start_time = microtime(TRUE);
             $parser = new SearchReplaceSerialized($column_value, $search, $replace);
