@@ -33,7 +33,8 @@ function search_replace_db_drush_help($section) {
 }
 
 /**
- * X.
+ * Drush command validation.
+ * 
  */
 function search_replace_db_validate() {
   $args = func_get_args();
