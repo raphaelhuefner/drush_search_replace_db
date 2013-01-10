@@ -10,7 +10,7 @@ drush search-replace-db searchstring replacestring [searchstring replacestring [
 
 Arguments:
 * *searchstring* At least one instance required. String to be searched.
-* *replacestring* At least one instance required. String acting as a replacement. 
+* *replacestring* At least one instance required. String acting as a replacement.
 
 ### Install
 
