@@ -151,11 +151,11 @@ function search_replace_db_update_db(array $search_replace_patterns=array()) {
               return drush_set_error('SEARCH_REPLACE_PARSER_ERROR', dt('SearchAndReplaceSerialized Parser exception: @exception_message', array('@exception_message' => $e->getMessage())));
             }
             drush_log(dt('End of search and replace in PHP serialized data. Runtime was @secs seconds.', array('@secs' => microtime(TRUE) - $start_time)), 'info');
-            $db->update($table_name, $column_name, $column_value, $changed_column_value);
+            $iterator->updateCurrentRow($changed_column_value);
           }
           else {
             drush_log(dt('Found "@search" and replace with "@replace" in table "@table" in column "@column".', array('@search' => $search, '@replace' => $replace, '@table' => $table_name, '@column' => $column_name)), 'info');
-            $db->updateWithTextReplace($table_name, $column_name, $column_value, $search, $replace);
+            $iterator->updateCurrentRowWithTextReplace($replace);
           }
         }
       }

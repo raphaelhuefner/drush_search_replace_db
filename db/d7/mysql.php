@@ -15,28 +15,52 @@ class Drush_SearchReplaceDb_D7_Mysql implements Drush_SearchReplaceDb {
   }
 
   public function getSearchIterator($tableName, $columnName, $search) {
-    $query = db_query("SELECT `$columnName` AS column_value FROM `$tableName` WHERE `$columnName` LIKE :search;", array(':search' => '%' . $search . '%'));
-    return new Drush_SearchReplaceDb_D7_Mysql_Iterator($query);
-  }
-
-  public function update($tableName, $columnName, $original, $new) {
-    db_query("UPDATE `$tableName` SET `$columnName` = :new WHERE `$columnName` = :original;", array(':original' => $original, ':new' => $new));
-  }
-
-  public function updateWithTextReplace($tableName, $columnName, $original, $search, $replace) {
-    db_query("UPDATE `$tableName` SET `$columnName` = REPLACE(`$columnName`, :search, :replace) WHERE `$columnName` = :original;", array(':original' => $original, ':search' => $search, ':replace' => $replace));
+    $query = db_query("SELECT * FROM `$tableName` WHERE `$columnName` LIKE :search;", array(':search' => '%' . $search . '%'));
+    return new Drush_SearchReplaceDb_D7_Mysql_Iterator($tableName, $columnName, $search);
   }
 }
 
 class Drush_SearchReplaceDb_D7_Mysql_Iterator implements Drush_SearchReplaceDb_Iterator {
-
+  protected $tableName = '';
+  protected $columnName = '';
+  protected $search = '';
+  protected $currentRow = array();
   protected $query = null;
 
-  public function __construct(DatabaseStatementInterface $query) {
-    $this->query = $query;
+  public function __construct($tableName, $columnName, $search) {
+    $this->tableName = $tableName;
+    $this->columnName = $columnName;
+    $this->search = $search;
+    $this->query = db_query("SELECT * FROM `$tableName` WHERE `$columnName` LIKE :search;", array(':search' => '%' . $search . '%'));
   }
 
   public function next() {
-    return $this->query->fetchField(0);
+    $this->currentRow = $this->query->fetchAssoc();
+    return isset($this->currentRow[$this->columnName]) ? $this->currentRow[$this->columnName] : FALSE;
+  }
+
+  public function updateCurrentRow($new) {
+    $update = db_update($this->tableName);
+    $update->fields(array($this->columnName => $new));
+    foreach ($this->currentRow as $fieldName => $fieldValue) {
+      $update->condition($fieldName, $fieldValue);
+    }
+    $update->execute();
+  }
+
+  public function updateCurrentRowWithTextReplace($replace) {
+    $update = db_update($this->tableName);
+    $update->expression(
+      $this->columnName,
+      'REPLACE(`' . $this->columnName . '`, :search, :replace)',
+      array(
+        ':search' => $this->search,
+        ':replace' => $replace
+      )
+    );
+    foreach ($this->currentRow as $fieldName => $fieldValue) {
+      $update->condition($fieldName, $fieldValue);
+    }
+    $update->execute();
   }
 }
